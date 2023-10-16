@@ -1,86 +1,71 @@
-from random import randint;
-from copy import deepcopy;
+from turtle import *;
+from colorsys import hsv_to_rgb;
+from genetic import *;
+from config import *;
 
-MUTATE_CHANCE = 10;
-CHROMOSOME_LENGTH = 40;
-POPULATION_SIZE = 40; # MUST BE A MULTIPLE OF 4
+screen = Screen();
+screen.setup(RIGHT - LEFT + 2 * PADDING, TOP - BOTTOM + 2 * PADDING);
 
-class Individual:
-    def __init__(self, chromosome, chromosome_length):
-        self.chromosome = chromosome;
-        self.chromosome_length = chromosome_length;
+def point_in_box(pos):
+    return pos[0] >= LEFT and pos[0] <= RIGHT and pos[1] <= TOP and pos[1] >= BOTTOM;
 
-    def mutate(self):
-        self.chromosome = list(map(lambda gene: gene if randint(0, 100) > MUTATE_CHANCE else 1 - gene, self.chromosome));
+def draw_box():
+    screen.bgcolor(BACKGROUND);
+    b = Turtle();
+    b.speed(0);
+    b.ht();
+    b.pencolor(BOX_COLOUR);
+    b.penup();
 
-    def randomize(self):
-        self.chromosome = [randint(0, 1) for _ in range(self.chromosome_length)];
+    for p in [(LEFT, TOP), (LEFT, BOTTOM), (RIGHT, BOTTOM), (RIGHT, TOP)]:
+        b.goto(p[0], p[1]);
+        b.pendown();
 
-    def cross(self, other):
-        line = randint(1, self.chromosome_length-1);
-        self.chromosome = [self.chromosome[i] if i < line else other.chromosome[i] for i in range(self.chromosome_length)]
+def draw_organism(organism, number):
+    o = Turtle();
+    o.speed(0);
+    o.ht();
 
-class Population:
-    def __init__(self, population_size, chromosome_length, fitness_function):
-        self.organisms = [];
+    o.penup();
+    o.goto(0, BOTTOM);
+    o.pendown();
+    o.left(INITIAL_ANGLE)
 
-        for _ in range(population_size):
-            i = Individual([], chromosome_length);
-            i.randomize();
-        
-            self.organisms.append(i);
+    length = 0;
 
-        self.fitness_function = fitness_function;
+    for gene in organism.chromosome:
+        o.pencolor(hsv_to_rgb(number / POPULATION_SIZE, 0.75, 1 - length / CHROMOSOME_LENGTH * 0.6));
 
-    def next_generation(self):
-        self.organisms.sort(key=lambda e : self.fitness_function(e));
-        fittest = self.organisms[::-1][:int(len(self.organisms)/2)]
-        new_generation = [x for x in fittest];
+        if gene == 1:
+            o.right(ANGLE);
 
-        for i in range(0, len(fittest), 2):
-            organism1 = deepcopy(fittest[i]);
-            organism1.cross(deepcopy(fittest[i + 1]));
-            organism1.mutate();
+        if gene == 0:
+            o.left(ANGLE);
 
-            new_generation.append(organism1);
-        
-            organism2 = deepcopy(fittest[i]);
-            organism2.cross(deepcopy(fittest[i + 1]));
-            organism2.mutate();
+        o.forward(STRENGTH);
 
-            new_generation.append(organism2);
-
-
-        self.organisms = new_generation;
-        self.organisms.sort(key=lambda e : self.fitness_function(e));
-        
-
-
-class Phylogeny:
-    def __init__(self, population_size, chromosome_length):
-        self.population_size = population_size;
-        self.population = Population(population_size, chromosome_length, lambda x : x.chromosome.count(1));
-        self.generations = 1;
-
-    def evolve(self, generations, display=False):
-        if display: self.display();
-
-        for _ in range(generations):
-            self.population.next_generation();
-            self.generations += 1;
+        if not point_in_box(o.pos()): break;
     
-            if display: self.display();
+        length += 1;
+
+    return (o.pos()[1] - BOTTOM + STRENGTH) / length;
+
+def draw_population(population):
+    screen.clearscreen()
+    draw_box();
+
+    a = population.organisms;
+
+    for i in range(len(a)):
+        a[i].score = draw_organism(a[i], i);
 
 
-    def display(self):
-        print(f'Generation #{self.generations}:')
+if __name__ == '__main__':
+    x = Phylogeny(POPULATION_SIZE, CHROMOSOME_LENGTH, draw_population, lambda x : x.score);
+    x.evolve(200);
 
-        for organism in self.population.organisms:
-            print(''.join(map(str, organism.chromosome)))
+    # Make all organisms draw at the same time with multiple asynchronous instances of turtles.
 
-        print('\n')
+    exitonclick();
 
-if __name__ == "__main__":
-    x = Phylogeny(POPULATION_SIZE, CHROMOSOME_LENGTH);
-    x.evolve(20, True);
 
