@@ -2,6 +2,8 @@ from turtle import *;
 from colorsys import hsv_to_rgb;
 from genetic import *;
 from config import *;
+from math import pi, cos, ceil;
+import time;
 
 screen = Screen();
 screen.setup(RIGHT - LEFT + 2 * PADDING, TOP - BOTTOM + 2 * PADDING);
@@ -21,48 +23,65 @@ def draw_box():
         b.goto(p[0], p[1]);
         b.pendown();
 
-def draw_organism(organism, number):
-    o = Turtle();
-    o.speed(0);
-    o.ht();
-
-    o.penup();
-    o.goto(0, BOTTOM);
-    o.pendown();
-    o.left(INITIAL_ANGLE)
-
-    length = 0;
-
-    for gene in organism.chromosome:
-        o.pencolor(hsv_to_rgb(number / POPULATION_SIZE, 0.75, 1 - length / CHROMOSOME_LENGTH * 0.6));
-
-        if gene == 1:
-            o.right(ANGLE);
-
-        if gene == 0:
-            o.left(ANGLE);
-
-        o.forward(STRENGTH);
-
-        if not point_in_box(o.pos()): break;
-    
-        length += 1;
-
-    return (o.pos()[1] - BOTTOM + STRENGTH) / length;
-
 def draw_population(population):
     screen.clearscreen()
     draw_box();
 
     a = population.organisms;
 
-    for i in range(len(a)):
-        a[i].score = draw_organism(a[i], i);
+    pens = [];
+    lengths = [1 for _ in range(POPULATION_SIZE)];
+    heights = [1 for _ in range(POPULATION_SIZE)];
+
+    for i in range(POPULATION_SIZE):
+        t = Turtle();
+
+        t.penup();
+        t.speed(0);
+        t.ht();
+        t.goto(-ceil(i/2) * cos(i * pi), BOTTOM);
+        #t.goto(POPULATION_SIZE / 2 - i, BOTTOM + PADDING + i * 2);
+        # t.goto(0, BOTTOM);
+        t.pendown();
+        t.left(INITIAL_ANGLE)
+
+        pens.append(t);
+
+
+    for gene_i in range(CHROMOSOME_LENGTH):
+        for i, t in enumerate(pens):
+            if t.pos()[1] - BOTTOM > heights[i]: heights[i] = t.pos()[1] - BOTTOM;
+            if not point_in_box(t.pos()): continue;
+
+            t.pencolor(hsv_to_rgb(i / POPULATION_SIZE, 0.75, lengths[i] / CHROMOSOME_LENGTH * 0.7 + 0.3));
+
+            gene = a[i].chromosome[gene_i];
+    
+            if gene == 1:
+                t.right(ANGLE);
+
+            if gene == 0:
+                t.left(ANGLE);
+
+            t.forward(STRENGTH);
+
+            lengths[i] += 1;
+    
+    # print(heights);
+
+    # for i in range(len(lengths)):
+        # print(1.2 - 0.2 * (TOP - BOTTOM) / (heights[i]), heights[i]);
+        # print(1 / (6 - 5 * heights[i] / (TOP - BOTTOM)), heights[i] / (TOP - BOTTOM));
+
+    # return [(heights[i] - BOTTOM + STRENGTH) / j for i, j in enumerate(lengths)];
+    #return [1 / (6 - 5 * heights[i] / (TOP - BOTTOM)) for i, j in enumerate(lengths)]
+    return [(heights[i] / (TOP - BOTTOM))**2 * ((TOP - BOTTOM) / STRENGTH) / j for i, j in enumerate(lengths)]
+
 
 
 if __name__ == '__main__':
     x = Phylogeny(POPULATION_SIZE, CHROMOSOME_LENGTH, draw_population, lambda x : x.score);
-    x.evolve(200);
+    x.evolve(1000, True);
 
     # Make all organisms draw at the same time with multiple asynchronous instances of turtles.
 

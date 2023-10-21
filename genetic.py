@@ -6,10 +6,18 @@ class Individual:
     def __init__(self, chromosome, chromosome_length):
         self.chromosome = chromosome;
         self.chromosome_length = chromosome_length;
-        self.score = [];
+        self.score = 0;
 
     def mutate(self):
-        self.chromosome = list(map(lambda gene: gene if randint(0, 100) > MUTATE_CHANCE else 1 - gene, self.chromosome));
+        if randint(1, 100) <= MUTATE_CHANCE:
+            line = randint(1, self.chromosome_length-1);
+    
+            self.chromosome = [1 - self.chromosome[i] if i < line else self.chromosome[i] for i in range(self.chromosome_length)]
+
+            print("Mutated!");
+
+
+        # self.chromosome = list(map(lambda gene: gene if randint(1, 100) >= MUTATE_CHANCE else 1 - gene, self.chromosome));
 
     def randomize(self):
         self.chromosome = [randint(0, 1) for _ in range(self.chromosome_length)];
@@ -36,11 +44,11 @@ class Population:
         self.organisms.sort(key=lambda e : self.fitness_function(e));
     
     def calculate_scores(self):
-        self.score_function(self);
+        for i, s in enumerate(self.score_function(self)):
+            self.organisms[i].score = s;
 
     def next_generation(self):
         fittest = self.organisms[::-1][:int(len(self.organisms)/2)]
-        #new_generation = [x for x in fittest];
         new_generation = [];
 
         for i in range(0, len(fittest), 2):
@@ -76,11 +84,9 @@ class Phylogeny:
     def __init__(self, population_size, chromosome_length, score_function, fitness_function):
         self.population_size = population_size;
         self.population = Population(population_size, chromosome_length, score_function, fitness_function);
-        self.generations = 1;
+        self.generations = 0;
 
     def evolve(self, generations, display=False):
-        if display: self.display();
-
         for _ in range(generations):
             self.population.next_generation();
             self.generations += 1;
@@ -91,8 +97,15 @@ class Phylogeny:
     def display(self):
         print(f'Generation #{self.generations}:')
 
-        for organism in self.population.organisms:
-            print(''.join(map(str, organism.chromosome)))
+        average = 0;
+
+        for i in self.population.organisms:
+            average += i.score / self.population_size
+
+        print(f'Average score of generation: {average}');
+
+        # for organism in self.population.organisms:
+        #     print(''.join(map(str, organism.chromosome)))
 
         print('\n')
 
